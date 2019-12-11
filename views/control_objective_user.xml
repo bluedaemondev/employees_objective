@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+    <template id="assets_backend" name="employee web_kanban_gauge assets fix" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="text/javascript" src="/employees_objective/static/src/js/kanban_gauge_fix.js"></script>
+        </xpath>
+    </template>
+
+    <menuitem
+            id="menu_hr_root"
+            name="Objectives"
+            sequence="75"/>
+   
+    <record id="view_objective_form" model="ir.ui.view">
+            <field name="name">objective.form</field>
+            <field name="model">employee.objective</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Objective">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Objective's name..." required="1"/>
+                            </h1>
+                        </div>
+                        <field name="objective_type" required="1"/>
+                        <field name="isPanel"/>
+                        <notebook attrs="{'invisible':[('objective_type','=', '')]}">
+                            <page attrs="{'invisible':[('objective_type','=', 'panel')]}" name="public" string="Objective Info.">
+                                <group>
+                                    <group string="Overview">
+                                    	<field name="employee_id"/>
+                                    	<field name="name" attrs="{'invisible': True}"/>
+                                    	<field name="objective_state"/>
+									</group>
+					             </group>
+								<field name="day_close" invisible="1"/>
+								<field name="notes" placeholder="Other Information ..." colspan="15"/>
+			                </page>
+                            <page attrs="{'invisible':[('objective_type','=', 'panel')]}" name="config" string="Configuration">
+                                <group>
+                                        <group string="Monetary">
+                                        <field name="currency"/>
+                                        <field name="monetary_objective"/>
+                                        <field name="conf_percentage"/>
+                                        <field name="min_margin_amount"/>
+                                    </group>
+                                    <group string="Details">
+                                        <field name="type"/>
+                                        <field name="period"/>
+                                        <field name="date_open"/>
+					                    <field name="date_closed" attrs="{'invisible': [('period', '!=', 'custom')]}"/>
+                                        <field name="actual_revenue"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page name="panel_conf" string="Panel Configuration" attrs="{'invisible':[('objective_type','=', 'employee')]}">
+                                <group string="Objectives:">
+                                    <field name="objective_ids" widget="many2many"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_objective_tree" model="ir.ui.view">
+            <field name="name">employee.objective.tree</field>
+            <field name="model">employee.objective</field> 
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="Objectives List">
+                    <field name="name"/>
+                    <field name="employee_id"/>
+                    <field name="objective_state"/>
+                    <field name="type"/>
+                    <field name="actual_revenue"/>
+                    <field name="monetary_objective"/>
+                    <field name="day_close" string="Remaining days" invisible="1"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="partner_kanban_view" model="ir.ui.view">
+            <field name="name">employee.objective.kanban</field>
+            <field name="model">employee.objective</field>
+            <field name="type">kanban</field>
+            <field name="arch" type="xml">
+                <kanban class="o_res_partner_kanban">
+                    <field name="employee_id"/>
+                    <field name="name"/>
+                    <field name="actual_revenue"/>
+                    <field name="monetary_objective"/>
+                    <field name="done_percentage" invisible="1"/>
+                    <field name="conf_percentage" invisible="1"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_global_click">
+                                    <div class="oe_kanban_details">
+                                        <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                        </strong>
+			    	                </div>
+                            	<div>
+                                	<field class="oe_gauge" name="actual_revenue" widget="perc_gauge" style="width:260px; height: 200px; cursor: pointer; align:center;" options="{'max_field':'monetary_objective','title':'Progress','label_field':'done_percentage', 'min_perc': 'conf_percentage'}"/>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="view_employee_objective_filter" model="ir.ui.view">
+            <field name="name">employee.objective.search</field>
+            <field name="model">employee.objective</field>
+            <field name="arch" type="xml">
+                <search string="Objectives">
+                    <field name="name" string="Objectives" filter_domain="[('name','ilike',name)]"/>
+                    <filter string="Accomplished" name="completed" domain="[('objective_state','=',True)]"/>
+                    <separator/>
+                    <group expand="0" name="group_obj" string="Group By">
+                        <filter name="group_completed" string="Completed" domain="[]" context="{'group_by':'objective_state'}"/>
+                        <filter name="group_employee" string="Employee" domain="[]" context="{'group_by':'employee_id'}"/>
+                        <filter name="group_type" string="Type" domain="[]" context="{'group_by':'type'}"/>
+                        <filter name="group_period" string="Period" domain="[]" context="{'group_by':'period'}"/>
+                        <filter name="group_percentage" string="Completion Percentage" domain="[]" context="{'group_by':'done_percentage'}"/>
+                    </group>
+                </search>
+             </field>
+         </record>
+
+        <record id="open_view_employee_objective_tree" model="ir.actions.act_window">
+            <field name="name">Objectives Structure</field>
+            <field name="res_model">employee.objective</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form,kanban</field>
+            <field name="view_id" ref="view_objective_tree"/>
+            <field name="domain">[]</field>
+            <field name="search_view_id" ref="view_employee_objective_filter"/>
+        </record>
+ 
+
+        <record id="open_view_employee_objective_list_my" model="ir.actions.act_window">
+            <field name="name">Objectives Overview</field>
+            <field name="res_model">employee.objective</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form,kanban</field>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="view_id" eval="False"/>
+            <field name="search_view_id" ref="view_employee_objective_filter"/>
+            <field name="help" type="html">
+              <p class="o_view_nocontent_smiling_face">
+                Add a new objective!
+              </p><p>
+                You can find all the information you need from the employee's
+                objectives right here!
+                Group them, search, add, and update existing objectives.
+              </p>
+            </field>
+        </record>
+
+        <menuitem
+            id="menu_open_view_employee_objective_list_my"
+            action="open_view_employee_objective_list_my"
+            parent="menu_hr_root"
+            sequence="3"/>
+
+        <!-- Employee tree by manager 
+        <record id="view_partner_tree2" model="ir.ui.view">
+            <field name="name">hr.employee.tree</field>
+            <field name="model">hr.employee</field>
+            <field name="field_parent">child_ids</field>
+            <field name="priority" eval="20"/>
+            <field name="arch" type="xml">
+                <tree string="Employees">
+                    <field name="name"/>
+                    <field name="work_phone"/>
+                    <field name="work_email"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="department_id"/>
+                    <field name="job_id"/>
+                    <field name="coach_id" invisible="1"/>
+                    <field name="parent_id" invisible="1"/>
+                </tree>
+            </field>
+        </record>
+-->
+</data>
+</odoo>

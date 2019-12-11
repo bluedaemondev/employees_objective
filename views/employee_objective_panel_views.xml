@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+
+            <!--
+                 solo podrán elegir el nombre y que objetivos de empleados agrupa
+                 el resto de datos los sacamos de los objetivos de empleados
+                 si para el gauge te hace falta algún campo, por ej el % ese de avance,
+                 mostra ese campo y que lo complete el usuario, pero no le demos a elegir todo el resto de info
+
+
+                 Hay que ver esta vista
+             -->
+   
+    <record id="view_sale_objective_panel_form" model="ir.ui.view">
+            <field name="name">objective.panel.form</field>
+            <field name="model">employee.objective.panel</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="New Objective Panel">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Panel's name..." required="True"/>
+                            </h1>
+                        </div>
+                        <group name="data" string="Employees info:">
+                            <field name="objective_ids" widget="many2many"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="partner_objective_panel_kanban_view" model="ir.ui.view">
+            <field name="name">employee.objective.panel.kanban</field>
+            <field name="model">employee.objective.panel</field>
+            <field name="type">kanban</field>
+            <field name="arch" type="xml">
+                <kanban class="o_res_partner_kanban">
+                    <field name="objective_ids"/>
+                    <field name="name"/>
+                    <field name="actual_revenue"/>
+                    <field name="monetary_objective"/>
+                    <field name="objective_state"/>
+                    <field name="conf_percentage"/>
+                    <field name="done_percentage"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_global_click">
+                                <div class="oe_kanban_content">
+                                    <div>
+                                        <strong class="o_kanban_record_title"><field name="name"/></strong>
+                                    </div>
+                                    <div class="text-muted o_kanban_record_subtitle">
+                                        <field name="type"/>
+                                    </div>
+
+                                    <div class="oe_kanban_bottom">
+                                        <div class="oe_kanban_bottom_left oe_inline">
+                                            <field t-if="notes != ''" name="notes"/>
+                                        </div>
+                                       <div class="oe_kanban_bottom_right oe_inline">
+                                            <field class="oe_gauge oe_inline" name="actual_revenue" widget="perc_gauge" style="width:100px; height: 100px; cursor: pointer; align:right;" options="{'max_field':'monetary_objective','label_field':'done_percentage', 'min_perc':'conf_percentage'}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="open_view_employee_objective_panel_list_my" model="ir.actions.act_window">
+            <field name="name">Panels Overview</field>
+            <field name="res_model">employee.objective.panel</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">kanban,form,tree</field>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="view_id" eval="False"/>
+            <field name="help" type="html">
+              <p class="o_view_nocontent_smiling_face">
+                Add a new panel!
+              </p><p>
+                Panels group your objectives, allowing you to find current objectives/filter on a period of time.
+              </p>
+            </field>
+        </record>
+
+    <menuitem id="sale_objective_panel_menu"
+            name="Panels"
+            action="open_view_employee_objective_panel_list_my"
+            parent="sale.sale_menu_root"
+            sequence="16"/>
+</data>
+</odoo>

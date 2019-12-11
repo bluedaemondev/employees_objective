@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_employee_objective_manager,employee.objective.manager,model_employee_objective,sales_team.group_sale_manager,1,1,1,1
+access_employee_objective_salesman,employee.objective.salesman,model_employee_objective,sales_team.group_sale_salesman,1,0,0,0
+access_employee_objective_admin,employee.objective.admin,model_employee_objective,base.group_user,1,1,1,1
