@@ -2,20 +2,9 @@
 <odoo>
     <data>
 
-
-            <!--
-                 solo podrán elegir el nombre y que objetivos de empleados agrupa
-                 el resto de datos los sacamos de los objetivos de empleados
-                 si para el gauge te hace falta algún campo, por ej el % ese de avance,
-                 mostra ese campo y que lo complete el usuario, pero no le demos a elegir todo el resto de info
-
-
-                 Hay que ver esta vista
-             -->
-   
     <record id="view_sale_objective_panel_form" model="ir.ui.view">
             <field name="name">objective.panel.form</field>
-            <field name="model">employee.objective.panel</field>
+            <field name="model">panel.objective</field>
             <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="New Objective Panel">
@@ -36,7 +25,7 @@
 
         <record id="partner_objective_panel_kanban_view" model="ir.ui.view">
             <field name="name">employee.objective.panel.kanban</field>
-            <field name="model">employee.objective.panel</field>
+            <field name="model">panel.objective</field>
             <field name="type">kanban</field>
             <field name="arch" type="xml">
                 <kanban class="o_res_partner_kanban">
@@ -63,7 +52,7 @@
                                             <field t-if="notes != ''" name="notes"/>
                                         </div>
                                        <div class="oe_kanban_bottom_right oe_inline">
-                                            <field class="oe_gauge oe_inline" name="actual_revenue" widget="perc_gauge" style="width:100px; height: 100px; cursor: pointer; align:right;" options="{'max_field':'monetary_objective','label_field':'done_percentage', 'min_perc':'conf_percentage'}"/>
+                                            <field class="oe_gauge oe_inline" name="actual_revenue" widget="perc_gauge" style="width:100px; height: 100px; cursor: pointer; align:right;" options="{'max_field':'monetary_objective','label_field':'done_percentage', 'title':'', 'min_perc':'conf_percentage'}"/>
                                         </div>
                                     </div>
                                 </div>
@@ -76,7 +65,7 @@
 
         <record id="open_view_employee_objective_panel_list_my" model="ir.actions.act_window">
             <field name="name">Panels Overview</field>
-            <field name="res_model">employee.objective.panel</field>
+            <field name="res_model">panel.objective</field>
             <field name="view_type">form</field>
             <field name="view_mode">kanban,form,tree</field>
             <field name="domain">[]</field>

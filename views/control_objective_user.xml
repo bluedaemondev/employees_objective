@@ -26,43 +26,51 @@
                                 <field name="name" placeholder="Objective's name..." required="1"/>
                             </h1>
                         </div>
-                        <field name="objective_type" required="1"/>
-                        <field name="isPanel"/>
-                        <notebook attrs="{'invisible':[('objective_type','=', '')]}">
-                            <page attrs="{'invisible':[('objective_type','=', 'panel')]}" name="public" string="Objective Info.">
+                        <field name="objective_state" readonly="1"/>
+                        <div class="oe_button_box" attrs="{'invisible':[('objective_type','=', 'employee')]}">
+                            <button name="action_change_state" attrs="{'invisible': [('objective_state', '!=', 'draft')]}" string="Confirm objective" type="object" class="oe_highlight" context="{'new_state': 'confirmed'}" groups="base.group_user"/>
+                            <button name="action_change_state" attrs="{'invisible': [('objective_state', '=', 'disabled')]}" string="Disable" type="object" class="oe_highlight" context="{'new_state': 'disabled'}" groups="base.group_user"/>
+                            <button name="action_change_state" attrs="{'invisible': [('objective_state', '!=', 'disabled')]}" string="Enable" type="object" class="oe_highlight" context="{'new_state': 'draft'}" groups="base.group_user"/>
+                        </div>
+                        <group>
+							<group name="configuration">
+								<field name="panel_id"/>
+								<field name="objective_type" required="1"/>
+								<field name="isPanel" invisible="1"/>
+							</group>
+						</group>
+                        <notebook>
+                            <page name="config" string="Objective Configuration" attrs="{'invisible':[('objective_type','=', 'panel')]}">
                                 <group>
                                     <group string="Overview">
                                     	<field name="employee_id"/>
-                                    	<field name="name" attrs="{'invisible': True}"/>
-                                    	<field name="objective_state"/>
+                                    	<field name="day_close" invisible="1"/>
 									</group>
-					             </group>
-								<field name="day_close" invisible="1"/>
-								<field name="notes" placeholder="Other Information ..." colspan="15"/>
-			                </page>
-                            <page attrs="{'invisible':[('objective_type','=', 'panel')]}" name="config" string="Configuration">
+					            </group>
                                 <group>
-                                        <group string="Monetary">
-                                        <field name="currency"/>
+                                     <group string="Monetary">
+                                        <field name="currency" invisible="1"/>
                                         <field name="monetary_objective"/>
                                         <field name="conf_percentage"/>
                                         <field name="min_margin_amount"/>
+                                        <field name="done_percentage"/>
+                                        <field name="actual_revenue" readonly="1"/>
                                     </group>
                                     <group string="Details">
                                         <field name="type"/>
                                         <field name="period"/>
                                         <field name="date_open"/>
 					                    <field name="date_closed" attrs="{'invisible': [('period', '!=', 'custom')]}"/>
-                                        <field name="actual_revenue"/>
                                     </group>
                                 </group>
                             </page>
-                            <page name="panel_conf" string="Panel Configuration" attrs="{'invisible':[('objective_type','=', 'employee')]}">
+                            <page name="panel_conf" string="Group Configuration" attrs="{'invisible':[('objective_type','=', 'employee')]}">
                                 <group string="Objectives:">
                                     <field name="objective_ids" widget="many2many"/>
                                 </group>
                             </page>
                         </notebook>
+                        <field name="notes" placeholder="Notes ..."/>
                     </sheet>
                 </form>
             </field>
@@ -76,7 +84,7 @@
                 <tree string="Objectives List">
                     <field name="name"/>
                     <field name="employee_id"/>
-                    <field name="objective_state"/>
+                    <field name="objective_state" invisible="0"/>
                     <field name="type"/>
                     <field name="actual_revenue"/>
                     <field name="monetary_objective"/>
@@ -106,7 +114,7 @@
                                         </strong>
 			    	                </div>
                             	<div>
-                                	<field class="oe_gauge" name="actual_revenue" widget="perc_gauge" style="width:260px; height: 200px; cursor: pointer; align:center;" options="{'max_field':'monetary_objective','title':'Progress','label_field':'done_percentage', 'min_perc': 'conf_percentage'}"/>
+                                	<field class="oe_gauge" name="actual_revenue" widget="perc_gauge" style="width:260px; height: 200px; cursor: pointer; align:center;" options="{'max_field':'monetary_objective','title':' ','label_field':'done_percentage', 'min_perc': 'conf_percentage'}"/>
                                 </div>
                             </div>
                         </t>
@@ -121,9 +129,11 @@
             <field name="arch" type="xml">
                 <search string="Objectives">
                     <field name="name" string="Objectives" filter_domain="[('name','ilike',name)]"/>
-                    <filter string="Accomplished" name="completed" domain="[('objective_state','=',True)]"/>
+                    <field name="panel_id" string="Panel"/>
+                    <filter string="Accomplished" name="completed" domain="[('objective_state','=','done')]"/>
                     <separator/>
                     <group expand="0" name="group_obj" string="Group By">
+                        <filter name="panel_id" string="Panel" domain="[]" context="{'group_by':'panel_id'}"/>
                         <filter name="group_completed" string="Completed" domain="[]" context="{'group_by':'objective_state'}"/>
                         <filter name="group_employee" string="Employee" domain="[]" context="{'group_by':'employee_id'}"/>
                         <filter name="group_type" string="Type" domain="[]" context="{'group_by':'type'}"/>
@@ -169,27 +179,20 @@
             id="menu_open_view_employee_objective_list_my"
             action="open_view_employee_objective_list_my"
             parent="menu_hr_root"
-            sequence="3"/>
+            sequence="3"/> 
 
-        <!-- Employee tree by manager 
-        <record id="view_partner_tree2" model="ir.ui.view">
-            <field name="name">hr.employee.tree</field>
-            <field name="model">hr.employee</field>
-            <field name="field_parent">child_ids</field>
-            <field name="priority" eval="20"/>
-            <field name="arch" type="xml">
-                <tree string="Employees">
-                    <field name="name"/>
-                    <field name="work_phone"/>
-                    <field name="work_email"/>
-                    <field name="company_id" groups="base.group_multi_company"/>
-                    <field name="department_id"/>
-                    <field name="job_id"/>
-                    <field name="coach_id" invisible="1"/>
-                    <field name="parent_id" invisible="1"/>
-                </tree>
-            </field>
+        <record id="open_view_panel_objective" model="ir.actions.act_window">
+            <field name="name">Panels</field>
+            <field name="res_model">panel.objective</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
         </record>
--->
+    
+		<menuitem id="panel_objective_menu"
+				name="Panels"
+				action="open_view_panel_objective"
+				parent="menu_hr_root"
+				sequence="10" groups="sales_team.group_sale_manager"/>
+
 </data>
 </odoo>

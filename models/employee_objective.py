@@ -7,32 +7,43 @@ from odoo import api, fields, models, _
 from odoo.tools.safe_eval import safe_eval
 from odoo.exceptions import ValidationError
 import logging
-import datetime  
+import datetime
 from datetime import timedelta 
 
 import pdb
 
 _logger = logging.getLogger(__name__)
 
+class PanelObjective(models.Model):
+
+    _name = "panel.objective"
+
+    name = fields.Char(string='Panel Name', required=True)
+
 
 class EmployeeObjective(models.Model):
 
     _name = "employee.objective"
     _description = 'employees objective log. Multiple types and periods are stored.'
-
+    _order = "create_date"
+    
+    panel_id = fields.Many2one(
+                                  'panel.objective',
+                                  string="Panel",
+                                  required=True
+                                )
     objective_id = fields.Char(
                                   string="Objective index",
-                                  compute='_compute_objective_id',
+                                  compute=False,
                                   store=True
                                   )
     employee_id = fields.Many2one(
                                   'hr.employee',
-                                  string="Employee related to this objective.",
+                                  string="Employee related to this objective",
                                   store=True,
                                   default=None,
                                   required=False
                                 )
-                                
     user_id = fields.Many2one(
                                   'res.users',
                                   string="User",
@@ -41,32 +52,30 @@ class EmployeeObjective(models.Model):
                                 )
     name = fields.Char(
                         string="Name",
-                        store=True,
                         required=True
                         )
     notes = fields.Text(
                         string="Other Info...",
-                        store=True
                         )
 
     currency = fields.Many2one(
                                 'res.currency',
                                 string='Currency',
-                                store=True
                             )
     monetary_objective = fields.Integer(
                                          string="Monetary Objective",
                                          readonly=False,
-                                         compute='_compute_monetary_obj',
                                          required=True,
+                                         compute=False,
                                          store=True
                                         )  
     actual_revenue = fields.Integer(
                                     compute='_compute_planned_revenue',
+                                    inverse="_set_planned_revenue",
+                                    readonly=False,
                                     string="Actual revenue",
                                     store=False
                                     )
-
     type = fields.Selection([
                              ('so', 'Total Sale Orders'),
                              ('inv', 'Total Invoicing'),
@@ -74,19 +83,17 @@ class EmployeeObjective(models.Model):
                              ],
                             index=True,
                             required=False,
-                            store=True,
-                            default=lambda self: 'marg',
+                            default='marg',
                             help="Type is used to separate different objectives for employees."
                             )
-
-    objective_state = fields.Boolean(
-                                    string="Completed?",
-                                    readonly=True,
-                                    default=False,
+    objective_state = fields.Selection(
+                                    [('draft','Draft'),('confirmed','Confirmed'),('done','Done'),('disabled','Disabled')],
+                                    string="Current state",
+                                    readonly=False,
+                                    default='draft',
                                     store=True,
-                                    compute='_compute_objective_state'
+                                    compute=False
                                     )
-    
     date_open = fields.Datetime(
                                 'Assignation Date',
                                 default=fields.Datetime.now,
@@ -97,7 +104,6 @@ class EmployeeObjective(models.Model):
                             compute='_compute_deadline',
                             string='Days to Close'
                             )
-
     period = fields.Selection([
                                ('custom', 'Custom lapse'),
                                ('day', '1 Day'),
@@ -109,18 +115,14 @@ class EmployeeObjective(models.Model):
                                ('year','1 Year')],
                                index=True,
                                required=True,
-                               store=True,
-                               default=lambda self: 'month',
+                               default='month',
                                help="Assign a period for this objective."
                                )
-    
     done_percentage = fields.Text(
-                                  compute="_compute_percentage",
-                                  store=True
+                                  compute="_compute_percentage"
                                   )
     conf_percentage = fields.Float(
                                   string="Min. Percentage",
-                                  store=True,
                                   default=50.00
                                   )
     min_margin_amount = fields.Float(
@@ -131,19 +133,18 @@ class EmployeeObjective(models.Model):
                                     readonly=True
                                     )
     objective_type = fields.Selection([
-                               ('employee', 'For Employee'),
-                               ('panel', 'Panel'),
+                               ('employee', 'Employee'),
+                               ('panel', 'Group'),
                                ],
                                index=True,
                                required=True,
-                               store=True,
+                               default='employee',
                                help="Is this objective meant to be grouped on a panel?"
                                )
     objective_ids = fields.One2many(
         'employee.objective',
         'objective_id',
-        string="Associated objectives for this panel",
-        store=True,
+        string="Associated objectives for this group",
         readonly=False
         )
     isPanel = fields.Boolean(
@@ -157,7 +158,6 @@ class EmployeeObjective(models.Model):
     @api.depends('name')
     def _compute_objective_id(self):
         for obj in self:
-            #pdb.set_trace()
             obj.objective_id = str(obj.name+'_'+obj.objective_type+'_'+obj.date_open.strftime("%m/%d/%Y"))
             _logger.info('computing ! %s ',obj.objective_id)
 
@@ -165,8 +165,6 @@ class EmployeeObjective(models.Model):
     def onchange_end_date( self ):
         if (self.date_open and self.date_closed) and (self.date_open > self.date_closed):
             self.date_closed = self.date_open
-            _logger.info('CAMBIANDO FECHAS')
-            _logger.info('DC : %s',self.date_closed)
             #raise ValidationError(_('The start date must be less than to the end date.'))
 
     @api.depends('monetary_objective','conf_percentage')
@@ -220,19 +218,12 @@ class EmployeeObjective(models.Model):
             if pan.objective_type == 'panel':
                 pan.isPanel = True
 
-    @api.depends('objective_ids','objective_type')
-    def _compute_monetary_obj(self):
-        for pan in self:
-            _monetary_objective = 0
-            for obj in pan.objective_ids:
-                _monetary_objective += obj.monetary_objective
-            pan.monetary_objective = _monetary_objective
-
-    @api.onchange('monetary_objective')
-    @api.depends('monetary_objective','type','objective_type','objective_ids')
+    @api.depends('monetary_objective','type','objective_state','objective_ids')
     def _compute_planned_revenue(self):
-        for obj in self:
-            _logger.info('%s YIPO TIPO',obj.objective_type)
+        for obj in self.sorted(lambda x: x.objective_type == 'panel'):
+            #pdb.set_trace()
+            _last_val = obj.actual_revenue
+            _actual_revenue = 0
             if obj.objective_type == 'employee':
                 orders_data = self.env['sale.order']
                 orders_data = orders_data.search([
@@ -241,40 +232,49 @@ class EmployeeObjective(models.Model):
                                                   ('date_order','>=',obj.date_open),
                                                   ('date_order','<=',obj.date_closed)
                                                   ])
-                _logger.info('computed _ EMPLOYEE OBJ _____ %s',orders_data)
                 for so in orders_data:
                     if obj.type == 'so' and (so.state=='sale' or so.state=='done'):
                         obj.actual_revenue += so.amount_total
-                    #_logger.info('Sale orders at : %s',self.id)                    
                     if obj.type == 'inv':
-                        #_logger.info('Invoicing at : %s',self.id)
                         for inv in orders_data:
                             if inv.invoice_ids.type == 'out_invoice':
                                 obj.actual_revenue += inv.amount_total    
                     if obj.type == 'marg':
-                        _logger.info('Revenue margin at : %s',obj.id)
-                    obj.actual_revenue += so.margin_extra_cost
-            
-            if obj.objective_type == 'panel':
-                _monetary_objective = 0
-                _actual_revenue = 0
-                _state = True
-                _done_percentage = 0
+                        obj.actual_revenue += so.margin_extra_cost
+            else:
+                #pdb.set_trace()
+                objs_data = self.env['employee.objective']
+                objs_data = objs_data.search([
+                                                ('panel_id','=',obj.panel_id.id),
+                                                ('objective_type','=','employee')
+                                                ])
+                for item in objs_data:
+                    _actual_revenue += item.actual_revenue
+                #pdb.set_trace()
+                obj.actual_revenue = _actual_revenue
 
-                for obj_r in obj.objective_ids:
-                    #pdb.set_trace()
-                    #if (obj_r.type in _type):   #Don't compare apples with oranges
+    def _compute_panel(self,state):
+        for pan in self:
+            if pan.objective_type == 'panel' and pan.isPanel:
+                _actual_revenue = 0
+                _monetary_objective = 0
+                _done_percentage = 0
+                for obj_r in pan.objective_ids.filtered(lambda x: x.objective_type != 'panel'):
                     _monetary_objective += obj_r.monetary_objective
                     _actual_revenue += obj_r.actual_revenue
-                    _state = _state and obj_r.objective_state
-                    #IF at least one of the objectives_state is false, then this panel
-                    #state, is also false.
-                #_done_percentage = round((_actual_revenue * 100)/(_monetary_objective or 1),2)
-                obj.monetary_objective = _monetary_objective
-                obj.actual_revenue = _actual_revenue
-                obj.objective_state = _state
-                #obj.done_percentage = _done_percentage
-                obj.done_percentage = obj._compute_percentage()
-                _logger.info('CONTROL TEST DATA : ______ %s , %s , %s , %s %',obj.monetary_objective,obj.actual_revenue,obj.objective_state,obj.done_percentage)
-
+                
+                pan.objective_state = state['new_state']
+                pan.actual_revenue = _actual_revenue #_set_planned_revenue(_actual_revenue) # = _actual_revenue
+                pan.monetary_objective = _monetary_objective
+                #pdb.set_trace()
+                pan._compute_percentage() # pan.done_percentage = 
     
+    def _set_planned_revenue(self,val=False):
+        #keep last value from "_compute_panel"
+        if self.objective_type == 'panel' and val != False:
+            #pdb.set_trace()
+            self.actual_revenue = val
+    
+    def action_change_state(self, ctxt):
+        if self.objective_type == 'panel':
+            self._compute_panel(ctxt)

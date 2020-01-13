@@ -10,7 +10,7 @@
     'description': "",
     'website': '',
     'depends': [
-        'sale',
+        'sale_margin_extend',
         'hr',
 	'web',
 	'web_kanban_gauge',
